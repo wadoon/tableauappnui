@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with TableauApplet.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.uka.ilkd.tableau.ui
+package de.ukd.ilkd.tableau.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -26,7 +26,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import de.ukd.ilkd.tableau.History
 import de.ukd.ilkd.tableau.Node
 
 var FONT_SIZE: Int = 12
@@ -35,9 +39,31 @@ var ALLOW_UNIFICATION: Boolean = false
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TableauPane(root: MutableState<Node?>) {
+fun TableauPane(root: Node, history: MutableState<History?>) {
+    val textMeasurer = rememberTextMeasurer()
+    val style = TextStyle(color = Color.Black, fontSize = 12.sp)
+
+    val measureTextWidth = { text: String ->
+        val widthInPixels = textMeasurer.measure(text, style)
+        widthInPixels.size.width.toFloat() to widthInPixels.size.height.toFloat()
+        /*with(LocalDensity.current) {
+            val width = widthInPixels.size.width//.toDp()
+            val height = widthInPixels.size.height//.toDp()
+            width.toFloat() to height.toFloat()
+        }*/
+    }
+
+
+
+
     Canvas(modifier = Modifier.size(100.dp).padding(16.dp), "Tableau") {
-        this.drawRect(Color.Green)
+        val nodeUi = NodeUI(root, measureTextWidth, textMeasurer)
+        nodeUi.layout()
+        //setSize(optimalSize)
+        //setMinimumSize(getSize())
+        //setPreferredSize(getSize())
+
+        nodeUi.paint(this)
     }
 
     /*
@@ -48,51 +74,6 @@ fun TableauPane(root: MutableState<Node?>) {
     private var nodeUI: NodeUI? = null
     private var automaticProveThread: Thread? = null
     private var automaticProve: AutomaticProving? = null
-
-    init {
-        addMouseListener(this)
-        addMouseMotionListener(this)
-        setFont(Font("Dialog", Font.PLAIN, FONT_SIZE))
-    }
-
-    /**
-     * (re)initialise the applet with an array of formulas
-     *
-     * @param forms
-     * array to start with
-     */
-    fun init(forms: Array<Formula?>) {
-        Node.resetCounter()
-        Constants.resetCounters()
-
-        root = Node(0, forms[0], null, null)
-        nodeUI = NodeUI(FontMeasurer(getGraphics() as Graphics2D), root)
-
-        var last: Node = root
-        for (i in 1 until forms.size) {
-            last = last.addSucc(forms[i], null)
-        }
-
-        invalidate()
-        lay()
-        comments.setText("Choose the open leaf to extend")
-        history = History(root)
-    }
-
-    /**
-     * lay out the component. Put each node to its place. And set the size of
-     * the component.
-     */
-    fun lay() {
-        if (root != null) {
-            nodeUI!!.layout()
-            setSize(optimalSize)
-            //System.out.println("getSize()=" + getSize());
-            setMinimumSize(getSize())
-            setPreferredSize(getSize())
-            getParent().invalidate()
-        }
-    }
 
     val optimalSize: Dimension?
     /**
@@ -362,13 +343,13 @@ fun TableauPane(root: MutableState<Node?>) {
 
     /*
 	 * print this component.
-	 * 
-	 * centre graphic on page vertically and horizontally. 
-	 * 
+	 *
+	 * centre graphic on page vertically and horizontally.
+	 *
 	 * It is scaled down, if it does not fit onto the page.
-	 * 
+	 *
 	 * The scale is reduced because 72 dpi is far too much!
-	 * 
+	 *
 	 */
     @Throws(PrinterException::class)
     fun print(graphics: Graphics, pageFormat: PageFormat, pageIndex: Int): Int {

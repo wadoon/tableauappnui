@@ -47,6 +47,11 @@ class FormulaTest {
     }
 
     @Test
+    fun testSample() {
+        FormulaParser(lex(SAMPLE))
+    }
+
+    @Test
     fun testUnify1() {
         assertTrue { unify("p(d,X9); p(X10, c)") }
         assertEquals("c", map!!.get("X9").toString())

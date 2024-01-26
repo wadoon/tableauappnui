@@ -31,7 +31,7 @@ import de.ukd.ilkd.tableau.history.HistoryItem
  *
  * @author mattias ulbrich
  */
-class History(private var root: Node?) : Iterable<HistoryItem?> {
+class History(private var root: Node) : Iterable<HistoryItem?> {
     private val historyStack = mutableListOf<HistoryItem>()
 
     fun undo(): HistoryItem? {
@@ -43,7 +43,7 @@ class History(private var root: Node?) : Iterable<HistoryItem?> {
 
         if (historyItem == null) return null
 
-        historyItem.undo(root!!)
+        historyItem.undo(root)
         //		System.out.println("-- UNDO -- " + historyItem);
         return historyItem
     }
@@ -53,7 +53,6 @@ class History(private var root: Node?) : Iterable<HistoryItem?> {
     }
 
     fun add(item: HistoryItem) {
-        require(root != null)
         if (item.isNotEmpty) {
 //			System.out.println("-- DO -- " + item);
             historyStack.add(item)
@@ -61,11 +60,11 @@ class History(private var root: Node?) : Iterable<HistoryItem?> {
     }
 
     fun rollBack() {
-        while (!historyStack.isEmpty()) {
+        while (historyStack.isNotEmpty()) {
             if (peek() is ChoicePoint) break
 
             val item: HistoryItem = take()
-            item.undo(root!!)
+            item.undo(root)
             //			System.out.println("-- UNDO --" + item);
 //			System.out.println(root.toTree());
         }

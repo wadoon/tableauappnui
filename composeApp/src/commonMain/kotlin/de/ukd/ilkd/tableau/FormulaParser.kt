@@ -74,6 +74,12 @@ class FormulaParser(private val stream: List<Token>) {
         return c
     }
 
+    fun lookaheadAndConsume(tt: TokenTypes) =
+        if (lookahead(tt)) {
+            consume(tt)
+            true
+        } else false
+
     private fun next() =
         if (lookahead(TokenTypes.EOF)) pos else ++pos
 
@@ -183,7 +189,7 @@ class FormulaParser(private val stream: List<Token>) {
 
     fun EquivalenceFormula(): Formula {
         val f = ImplicationFormula()
-        if (lookahead(TokenTypes.EQUIV)) {
+        if (lookaheadAndConsume(TokenTypes.EQUIV)) {
             val g = EquivalenceFormula()
             return BinopFormula(Operator.EQUIV, f, g)
         }
@@ -192,7 +198,7 @@ class FormulaParser(private val stream: List<Token>) {
 
     fun ImplicationFormula(): Formula {
         val f = DisjunctionFormula()
-        if (lookahead(TokenTypes.IMPLIES)) {
+        if (lookaheadAndConsume(TokenTypes.IMPLIES)) {
             val g = ImplicationFormula()
             return BinopFormula(Operator.IMPL, f, g)
         }
@@ -201,7 +207,7 @@ class FormulaParser(private val stream: List<Token>) {
 
     fun DisjunctionFormula(): Formula {
         val f = ConjunctionFormula()
-        if (lookahead(TokenTypes.OR)) {
+        if (lookaheadAndConsume(TokenTypes.OR)) {
             val g = DisjunctionFormula()
             return BinopFormula(Operator.OR, f, g)
         }
@@ -210,7 +216,7 @@ class FormulaParser(private val stream: List<Token>) {
 
     fun ConjunctionFormula(): Formula {
         val f = BaseFormula()
-        if (lookahead(TokenTypes.AND)) {
+        if (lookaheadAndConsume(TokenTypes.AND)) {
             val g = ConjunctionFormula()
             return BinopFormula(Operator.AND, f, g)
         }

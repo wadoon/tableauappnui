@@ -6,9 +6,9 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import de.uka.ilkd.tableau.ui.TableauPane
 import de.ukd.ilkd.tableau.*
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import de.ukd.ilkd.tableau.ui.TableauPane
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable

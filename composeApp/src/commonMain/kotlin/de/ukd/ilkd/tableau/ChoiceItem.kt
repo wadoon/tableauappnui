@@ -33,7 +33,7 @@ class Gamma(var target: Node, var gamma: Node) : ChoiceItem {
     var instCount: Int = 0
 
     init {
-        var n: Node = target
+        var n: Node? = target
         while (n != null) {
             if (n.reason === gamma) instCount++
             n = n.getParent()
@@ -46,13 +46,12 @@ class Gamma(var target: Node, var gamma: Node) : ChoiceItem {
 
     override fun toString() = "Gamma[${gamma.number} on ${target.number}]"
 
-    override fun compareTo(o: ChoiceItem?): Int {
-        if (o is Gamma) {
-            val g = o
-            return if (instCount == g.instCount) {
-                g.gamma.number - gamma.number
+    override fun compareTo(other: ChoiceItem?): Int {
+        if (other is Gamma) {
+            return if (instCount == other.instCount) {
+                other.gamma.number - gamma.number
             } else {
-                instCount - g.instCount
+                instCount - other.instCount
             }
         }
         // first close than gamma
@@ -77,7 +76,7 @@ class Close(node1: Node, node2: Node) : ChoiceItem {
         val f1: Formula = node1.getFormula()!!
         val f2: Formula = node2.getFormula()!!
         val ret = CompoundItem()
-        val inst: Substitution = Substitution()
+        val inst = Substitution()
 
         val canUnify = (Formula.unify(f1, NotFormula(f2), inst)
                 || Formula.unify(NotFormula(f1), f2, inst))
@@ -119,9 +118,9 @@ class Close(node1: Node, node2: Node) : ChoiceItem {
         return (("CloseItem[" + node1.number) + " and " + node2.number) + "]"
     }
 
-    override fun compareTo(o: ChoiceItem?): Int {
-        if (o is Close) {
-            return minIndex - o.minIndex
+    override fun compareTo(other: ChoiceItem?): Int {
+        if (other is Close) {
+            return minIndex - other.minIndex
         }
         // first close than gamma
         return -1
@@ -131,7 +130,7 @@ class Close(node1: Node, node2: Node) : ChoiceItem {
         fun canUnify(node1: Node, node2: Node): Boolean {
             val f1: Formula = node1.getFormula()!!
             val f2: Formula = node2.getFormula()!!
-            val inst: Substitution = Substitution()
+            val inst = Substitution()
             return (Formula.unify(f1, NotFormula(f2), inst)
                     || Formula.unify(NotFormula(f1), f2, inst))
         }

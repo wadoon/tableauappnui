@@ -18,9 +18,17 @@
  */
 package de.uka.ilkd.tablet
 
-class AutomaticProving(private val maxChoiceDepth: Int, root: Node, useTrigger: Boolean) {
-    private val root: Node = root
-    private var history: History? = null
+import de.ukd.ilkd.tableau.Gamma
+import de.ukd.ilkd.tableau.History
+import de.ukd.ilkd.tableau.Node
+import de.ukd.ilkd.tableau.Type
+import de.ukd.ilkd.tableau.history.ChoicePoint
+import de.ukd.ilkd.tableau.history.Close
+import de.ukd.ilkd.tableau.history.CompoundItem
+import de.ukd.ilkd.tableau.history.NewNodes
+
+class AutomaticProving(private val maxChoiceDepth: Int, val root: Node, useTrigger: Boolean) {
+    private val history: History = History(root)
     private var triggerLock: Any? = null
     private var trigger = false
 
@@ -31,18 +39,11 @@ class AutomaticProving(private val maxChoiceDepth: Int, root: Node, useTrigger: 
     }
 
     fun run() {
-        history = History(root)
         history.add(runBasicSteps(root))
         history.add(runAutoClose(root))
 
         try {
             while (true) {
-                waitTrigger()
-
-                if (Thread.interrupted()) {
-                    throw InterruptedException()
-                }
-
                 var goal: Node = nextOpenGoal()
                     ?: // mark successful
                     return
@@ -52,23 +53,22 @@ class AutomaticProving(private val maxChoiceDepth: Int, root: Node, useTrigger: 
                 if (choiceDepth > maxChoiceDepth) {
                     history.rollBack()
                 } else {
-                    val choicePoint: ChoicePoint = createChoicepoint(goal)
+                    val choicePoint = createChoicepoint(goal)
                     history.add(choicePoint)
                 }
 
-                var choicePoint: ChoicePoint = history.peek() as ChoicePoint
+                var choicePoint = history.peek() as? ChoicePoint
                 if (choicePoint == null) {
                     // mark unsuccessfull
                     history.undoAll()
                     return
                 }
 
-                var item: ChoiceItem = choicePoint.take()
+                var item = choicePoint.take()
                 while (item == null) {
                     history.take()
-
                     history.rollBack()
-                    choicePoint = history.peek() as ChoicePoint
+                    choicePoint = history.peek() as? ChoicePoint
 
                     if (choicePoint == null) {
                         // mark unsuccessfull
@@ -79,15 +79,16 @@ class AutomaticProving(private val maxChoiceDepth: Int, root: Node, useTrigger: 
                     item = choicePoint.take()
                 }
 
-                goal = choicePoint.getGoal()
-                assert(goal.isLeaf())
-                assert(goal === root || goal.hasAsAncestor(root))
-                assert(root.toTree().equals(choicePoint.tree)) { root.toTree() }
-                history.add(item.apply(root))
-
-                history.add(runBasicSteps(goal))
-                // TODO reicht hier ggf. goal?
-                history.add(runAutoClose(root))
+                if (choicePoint != null) {
+                    goal = choicePoint.getGoal()
+                    require(goal.isLeaf)
+                    require(goal === root || goal.hasAsAncestor(root))
+                    require(root.toTree() == choicePoint.tree) { root.toTree() }
+                    history.add(item.apply(root))
+                    history.add(runBasicSteps(goal))
+                    // TODO reicht hier ggf. goal?
+                    history.add(runAutoClose(root))
+                }
             }
         } catch (e: RuntimeException) {
             e.printStackTrace()
@@ -96,27 +97,27 @@ class AutomaticProving(private val maxChoiceDepth: Int, root: Node, useTrigger: 
     }
 
     private fun countGamma(goal: Node): Int {
-        val reason: Node = goal.getReason()
-        var `val` = if (reason != null && reason.getFormula().getType() === Type.GAMMA) 1
+        val reason = goal.reason
+        var value = if (reason != null && reason.getFormula()?.type === Type.GAMMA) 1
         else 0
 
-        val parent: Node = goal.getParent()
-        if (parent != null) `val` += countGamma(parent)
+        val parent = goal.getParent()
+        if (parent != null) value += countGamma(parent)
 
-        return `val`
+        return value
     }
 
     private fun nextOpenGoal(): Node? {
         var smallestLeaf: Node? = null
         for (node in root) {
-            if (node.isLeaf() && (smallestLeaf == null || node.getNumber() < smallestLeaf.getNumber())) smallestLeaf =
-                node
+            if (node.isLeaf && (smallestLeaf == null || node.number < smallestLeaf.number))
+                smallestLeaf = node
         }
         return smallestLeaf
     }
 
     private fun createChoicepoint(leaf: Node): ChoicePoint {
-        val choicePoint: ChoicePoint = ChoicePoint(leaf)
+        val choicePoint = ChoicePoint(leaf)
         // first close then gamma ...
         addClose(choicePoint, leaf)
         addGamma(choicePoint, leaf)
@@ -127,11 +128,11 @@ class AutomaticProving(private val maxChoiceDepth: Int, root: Node, useTrigger: 
 
     // choose those gamma formulas more likely that are less expanded on that tree.
     private fun addGamma(choicePoint: ChoicePoint, leaf: Node) {
-        var n: Node = leaf
+        var n: Node? = leaf
         while (n != null) {
-            val f: Formula = n.getFormula()
-            if (f.getType() === Type.GAMMA) {
-                val gamma: Gamma = Gamma(leaf, n)
+            val f = n.getFormula()!!
+            if (f.type === Type.GAMMA) {
+                val gamma = Gamma(leaf, n)
                 //				if(gamma.instCount == 0) {
                 choicePoint.add(gamma)
                 //			}
@@ -140,13 +141,13 @@ class AutomaticProving(private val maxChoiceDepth: Int, root: Node, useTrigger: 
         }
     }
 
-    private fun addClose(choicePoint: ChoicePoint, leaf: Node) {
-        var n: Node = leaf
+    private fun addClose(choicePoint: ChoicePoint, leaf: Node?) {
+        var n = leaf
         while (n != null) {
-            var m: Node = n.getParent()
+            var m = n.getParent()
             while (m != null) {
-                if (Close.canUnify(m, n)) {
-                    choicePoint.add(Close(m, n))
+                if (de.ukd.ilkd.tableau.Close.canUnify(m, n)) {
+                    choicePoint.add(de.ukd.ilkd.tableau.Close(m, n))
                     //					System.out.println(" CLOSE " + m + n);
                 }
                 m = m.getParent()
@@ -157,48 +158,31 @@ class AutomaticProving(private val maxChoiceDepth: Int, root: Node, useTrigger: 
 
     fun runBasicSteps(below: Node?): NewNodes {
         var before: Int
-        val newNodes: NewNodes = NewNodes()
+        val newNodes = NewNodes()
         do {
-            before = Node.getCounter()
+            before = Node.counter
             newNodes.addAll(below!!.automaticApplication(Type.ALPHA))
-            newNodes.addAll(below!!.automaticApplication(Type.DELTA))
-            newNodes.addAll(below!!.automaticApplication(Type.NEGNEG))
-            newNodes.addAll(below!!.automaticApplication(Type.BETA))
-        } while (Node.getCounter() > before)
+            newNodes.addAll(below.automaticApplication(Type.DELTA))
+            newNodes.addAll(below.automaticApplication(Type.NEGNEG))
+            newNodes.addAll(below.automaticApplication(Type.BETA))
+        } while (Node.counter > before)
         return newNodes
     }
 
     private fun runAutoClose(below: Node): CompoundItem {
-        val coll: CompoundItem = CompoundItem()
+        val coll = CompoundItem()
         for (n in below) {
-            var p: Node = n.getParent()
+            var p: Node? = n.getParent()
             while (p != null) {
                 if (n.getFormula()!!.closesWith(p.getFormula())) {
-                    val histItem: HistoryItem.Close = Close(n, p)
-                    if (n.setClosed(histItem.getNumber()));
+                    val histItem = Close(n, p)
+                    if (n.setClosed(histItem.number));
                     coll.add(histItem)
                 }
                 p = p.getParent()
             }
         }
         return coll
-    }
-
-    fun trigger() {
-        if (triggerLock != null) synchronized(triggerLock) {
-            trigger = true
-            triggerLock.notify()
-        }
-    }
-
-    @Throws(InterruptedException::class)
-    private fun waitTrigger() {
-        if (triggerLock != null) {
-            synchronized(triggerLock) {
-                while (!trigger) triggerLock.wait()
-                trigger = false
-            }
-        }
     }
 
     fun addHistoryTo(hist: History) {

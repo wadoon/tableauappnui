@@ -18,6 +18,8 @@
  */
 package de.ukd.ilkd.tableau
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import de.ukd.ilkd.tableau.history.NewNodes
 import org.jetbrains.skia.Point
 import kotlin.math.max
@@ -39,7 +41,11 @@ class Node(
     val depth: Int, formula: Formula?, parent: Node?, reason: Node?
 ) : Iterable<Node?>, Comparable<Node> {
     /** this information is not used in this class but stored for NodeUI  */
-    var bound: Rectangle = Rectangle()
+    var bound: Size = Size(0f, 0f)
+
+    /** this information is not used in this class but stored for NodeUI  */
+    var pos = Offset(0f, 0f)
+
 
     /** the contained formula  */
     private var formula: Formula?
@@ -245,9 +251,7 @@ class Node(
         return formula
     }
 
-    fun getParent(): Node {
-        return parent!!
-    }
+    fun getParent(): Node? = parent
 
     /**
      * is n an ancestor for me? is it a parent, or parent's parent ...
@@ -329,7 +333,7 @@ class Node(
             ChildMode.RIGHT -> sb.append("[below right of=n").append(parent!!.number).append("] ")
             ChildMode.SINGLE -> sb.append("[below of=n").append(parent!!.number).append("] ")
             ChildMode.ABSOLUTE -> sb.append(
-                " at (${bound.x + bound.width / 2.0},-${bound.y + bound.height / 2.0}) "
+                " at (${pos.x + bound.width / 2.0},-${pos.y + bound.height / 2.0}) "
             )
 
             ChildMode.NONE -> TODO()

@@ -35,8 +35,7 @@ interface HistoryItem {
 }
 
 
-class Instantiation(private val variable: String, instantiation: Formula) : HistoryItem {
-    private val instantiation: Formula = instantiation
+class Instantiation(private val variable: String, private val instantiation: Formula) : HistoryItem {
 
     override fun undo(root: Node) {
         root.uninstantiate(variable)
@@ -69,8 +68,7 @@ class Close(positiveNode: Node, negativeNode: Node) : HistoryItem {
         }
     }
 
-
-    override fun toString(): String = ("Branch(es) closed with #" + node1.number).toString() + " and #" + node2.number
+    override fun toString(): String = "Branch(es) closed with #${node1.number} and #${node2.number}"
 
     override val isNotEmpty: Boolean
         get() = true
@@ -97,12 +95,11 @@ class NewNodes(val nodes: MutableList<Node> = mutableListOf()) : MutableList<Nod
     }
 
     override val isNotEmpty: Boolean
-        get() = isNotEmpty
+        get() = isNotEmpty()
 }
 
-class ChoicePoint(goal: Node) : HistoryItem {
+class ChoicePoint(private val goal: Node) : HistoryItem {
     private val choices = mutableListOf<ChoiceItem>()
-    private val goal: Node = goal
 
     var tree: String? = null
 
@@ -138,10 +135,6 @@ class ChoicePoint(goal: Node) : HistoryItem {
 class CompoundItem(val historyItems: MutableList<HistoryItem> = mutableListOf())
     : MutableList<HistoryItem> by historyItems,
     HistoryItem {
-    constructor(h1: HistoryItem, h2: HistoryItem) : this() {
-        historyItems.add(h1)
-        historyItems.add(h2)
-    }
 
     override fun undo(root: Node) {
         for (i in size - 1 downTo 0) {

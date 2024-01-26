@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with TableauApplet.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.uka.ilkd.tableau.ui
+package de.ukd.ilkd.tableau.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material.*

@@ -1,4 +1,4 @@
-rootProject.name = "shostakapp"
+rootProject.name = "TableauApp"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

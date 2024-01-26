@@ -16,37 +16,20 @@
  * You should have received a copy of the GNU General Public License
  * along with TableauApplet.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.uka.ilkd.tableau.ui
+package de.ukd.ilkd.tableau.ui
 
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.sp
 import de.ukd.ilkd.tableau.Node
 import de.ukd.ilkd.tableau.Type.*
 import org.jetbrains.skia.Point
 import kotlin.math.max
 
-@Composable
-fun NodeUI(root: Node) {
-    val style = TextStyle(color = Color.Black, fontSize = 12.sp)
-    val textMeasurer = rememberTextMeasurer()
-
-    @Composable
-    fun measureTextWidth(text: String, style: TextStyle): Pair<Float, Float> {
-        val widthInPixels = textMeasurer.measure(text, style)
-        with(LocalDensity.current) {
-            val width = widthInPixels.size.width//.toDp()
-            val height = widthInPixels.size.height//.toDp()
-            return width.toFloat() to height.toFloat()
-        }
-    }
+class NodeUI(val root: Node, val measureTextWidth: (s: String) -> Pair<Float, Float>, val textMeasurer: TextMeasurer) {
 
     /**
      * return the height of this node.
@@ -62,25 +45,21 @@ fun NodeUI(root: Node) {
     var dragMode: DragMode = DragMode.NONE
     var draggedNode: Node? = null
 
-    val height = measureTextWidth("X", style).second + DOUBLED_MARGIN + LEVEL_DISTANCE
+    val height = measureTextWidth("X").second + DOUBLED_MARGIN + LEVEL_DISTANCE
 
     fun translate(node: Node, deltax: Float) {
-        for (n in node) {
-            n.bound.x += deltax
-        }
+        for (n in node)
+            n.bound = n.bound.copy(width = n.bound.width + deltax)
     }
 
-    @Composable
     fun calcSize() {
         for (node in root) {
             val formString: String = node.text
-            val (w, h) = measureTextWidth(formString, style)
-            node.bound.width = w + DOUBLED_MARGIN
-            node.bound.height = h + DOUBLED_MARGIN
+            val (w, h) = measureTextWidth(formString)
+            node.bound = Size(w + DOUBLED_MARGIN, h + DOUBLED_MARGIN)
         }
     }
 
-    @Composable
     fun layout(node: Node, xoffset: Float): Float {
         val mywidth = node.bound.width + MARGIN
 
@@ -101,22 +80,18 @@ fun NodeUI(root: Node) {
                 theirWidth
             }
 
-        node.bound.y = height * node.depth
-        node.bound.x = xoffset + (maxWidth - mywidth) / 2F
-
+        node.pos = Offset(xoffset + (maxWidth - mywidth) / 2F, height * node.depth)
         return xoffset + maxWidth
     }
 
-    @Composable
     fun layout(): Float {
         calcSize()
         return layout(root, 0F)
     }
 
-    @Composable
     fun contains(node: Node, p: Point): Node? {
         for (n in node) {
-            if (n.bound.contains(p)) return n
+            //TODO if (n.bound.contains(p)) return n
         }
         return null
     }
@@ -128,12 +103,10 @@ fun NodeUI(root: Node) {
      * point to check
      * @return true iff the point lays within the boundaries.
      */
-    @Composable
     fun contains(p: Point): Node? {
         return contains(root, p)
     }
 
-    @Composable
     fun isLaidOut(n: Node): Boolean {
         return n.bound.width !== 0F
     }
@@ -148,12 +121,11 @@ fun NodeUI(root: Node) {
      */
     fun getCenter(node: Node): Point {
         return Point(
-            node.bound.x + node.bound.width / 2,
-            node.bound.y + node.bound.height / 2
+            node.pos.x + node.bound.width / 2,
+            node.pos.y + node.bound.height / 2
         )
     }
 
-    @Composable
     fun paint(node: Node, g: DrawScope) {
         val center: Point = getCenter(node)
         for (n in node.getSuccs()) {
@@ -188,7 +160,7 @@ fun NodeUI(root: Node) {
                 else -> (Color.White)
             }
 
-        g.drawRect(nextColor, Offset(node.bound.x, node.bound.y), Size(node.bound.width, node.bound.height))
+        g.drawRect(nextColor, Offset(node.pos.x, node.pos.y), Size(node.bound.width, node.bound.height))
 
         //g.setColor(Color.black)
         val dragMode =
@@ -202,17 +174,19 @@ fun NodeUI(root: Node) {
                 Color.Black
             }
 
-        g.drawRect(dragMode, Offset(node.bound.x, node.bound.y), Size(node.bound.width, node.bound.height))
+        //g.drawRect(dragMode, Offset(node.bound.x, node.bound.y), Size(node.bound.width, node.bound.height))
 
         //val descent = getDescent("p") as Int
         g.drawText(
             textMeasurer,
             text = node.text,
-            maxLines = 1,
-            topLeft = Offset(
+            size = node.bound,
+            topLeft = node.pos
+            //maxLines = 1,
+            /*topLeft = Offset(
                 node.bound.x + MARGIN,
                 node.bound.y + node.bound.height - MARGIN
-            )
+            ),*/
         )
 
         for (n in node.getSuccs()) {
@@ -220,7 +194,6 @@ fun NodeUI(root: Node) {
         }
     }
 
-    @Composable
     fun paint(g: DrawScope) {
         paint(root, g)
     }
@@ -231,7 +204,6 @@ fun NodeUI(root: Node) {
      *
      * @return the width of the tree beginning here
      */
-    @Composable
     fun getWidth(node: Node): Float {
         var width = node.bound.width + MARGIN
 
@@ -246,8 +218,6 @@ fun NodeUI(root: Node) {
 
     val width = getWidth(root)
 
-
-    @Composable
     fun setDragged(node: Node?, dragMode: DragMode) {
         draggedNode = node
         //TODO dragMode = dragMode
