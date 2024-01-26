@@ -20,15 +20,15 @@ package de.ukd.ilkd.tableau.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.ukd.ilkd.tableau.History
 import de.ukd.ilkd.tableau.Node
@@ -56,7 +56,19 @@ fun TableauPane(root: Node, history: MutableState<History?>) {
 
 
 
-    Canvas(modifier = Modifier.size(100.dp).padding(16.dp), "Tableau") {
+    Canvas(modifier = Modifier.pointerInput(Unit) {
+        detectTapGestures(onTap = {
+            println("test")
+            for (node in root) {
+                val r = Rect(node.pos, node.bound)
+                println(node)
+                println(r)
+                if (it in r) {
+                    println(node)
+                }
+            }
+        })
+    }, "Tableau") {
         val nodeUi = NodeUI(root, measureTextWidth, textMeasurer)
         nodeUi.layout()
         //setSize(optimalSize)
